@@ -281,18 +281,85 @@ xlim([0 3]);
 % Then plot the two envelopes on top of each other (a 30 s window is enough).
 
 % YOUR CODE HERE
+a1=corrcoef(envMCI(:,1),envOurs_norm(:,1));
+alpha1=corrcoef(envMCI(:,1),envOurs_norm(:,1));
 
+
+[amb1,alags1] =xcorr(envMCI(:,1),envOurs_norm(:,1));
+[maxValue1, maxIndex1] = max(amb1);
+
+delay1 = (alags1(maxIndex1)/fs)*1000;
+% to get seconds divide by fs, delay1 is in samples so samples/ (samples/ second) we get seconds. 
+% Then multiply by 1000 to get milliseconds
+
+
+[amb2,alags2] =xcorr(envMCI(:,2),envOurs_norm(:,2));
+[maxValue2, maxIndex2] = max(amb2);
+
+delay2 = (alags2(maxIndex2)/fs)*1000; 
+
+[amb3,alags3] =xcorr(envMCI(:,3),envOurs_norm(:,3));
+[maxValue3, maxIndex3] = max(amb3);
+
+delay3 = (alags3(maxIndex3)/fs)*1000; 
+
+[amb4,alags4] =xcorr(envMCI(:,4),envOurs_norm(:,4));
+[maxValue4, maxIndex4] = max(amb4);
+
+delay4 = (alags4(maxIndex4)/fs)*1000; 
+
+
+figure('Name','Recorded MCI Envelopes VS our Envelopes (Normalized)'); 
+subplot(4,1,1);
+plot(t,envMCI(:,1),t,envOurs_norm(:,1));
+legend('MCI Env', 'Our Env Norm');
+xlabel('Time');
+ylabel('Right bicep');
+xlim([0 30]);
+
+subplot(4,1,2);
+plot(t,envMCI(:,2),t,envOurs_norm(:,2));
+legend('MCI Env', 'Our Env Norm');
+xlabel('Time');
+ylabel('left bicep');
+xlim([0 30]);
+
+subplot(4,1,3);
+plot(t,envMCI(:,3),t,envOurs_norm(:,3));
+legend('MCI Env', 'Our Env Norm');
+xlabel('Time');
+ylabel('left trap');
+xlim([0 30]);
+
+subplot(4,1,4);
+plot(t,envMCI(:,4),t,envOurs_norm(:,4));
+legend('MCI Env', 'Our Env Norm');
+xlabel('Time');
+ylabel('right trap');
+xlim([0 30]);
+
+%%% comments after comparing both envelopes. 
+% First It can be seen clearly from the figures
+% that our signal where we reached the envelope by a lowpass filter of
+% 5Hz was noticeably smoother than the signal recorded ( envelope at 9 Hz) which makes
+% sense. As higher frequency envelopes tends to be more jittery "Jumpy"
+% while lower frequency LP filter to get the envelope is more smooth. 
+% About the lag / leading of one signal w.r.to the other , there is a lead
+% between our envelope and the recorded MCI as expected and to be confirmed
+% by exact number from the correlation analysis.
+% From the xcorr value of delay1. Right bicep delay was 36.5 ms. Similarly
+% the other muscle signals follow.
 
 % --- Downsample to 100 Hz
-% WHY only now: the envelope is a slow signal (below 5 Hz), so 100 Hz is
+% WHY only now: the envelope is a slow signal (below 5 Hz), so 100  Hz is
 % plenty. Doing it BEFORE filtering would alias the EMG (which goes up to
 % 450 Hz) and destroy it. The cursor also only updates ~60 times per second.
-step = fs / fsDown;                        % keep 1 sample every 20
+step = fs / fsDown;                        % keep 1 sample every 20 , 2000/100
 dt   = 1 / fsDown;                         % time between downsampled samples [s]
 % Keep one sample every 'step' and create:
 %   tD, envOursD, envMCID, cursorCmD
-
 % YOUR CODE HERE
+tD = 0 : dt:259;
 
 
 
