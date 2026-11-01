@@ -34,7 +34,7 @@ matFile = 'Group_1.mat';   % your group's data file
 task    = 'centerout';     % which task to analyze: 'centerout' or 'random'
 fsDown  = 100;             % rate we use after the envelope is computed [Hz]
 
-animateCursor     = true;  % Part 3: animate the logged and the rebuilt cursor on the screen
+animateCursor     = false;  % Part 3: animate the logged and the rebuilt cursor on the screen
 resetAtEachTarget = true;  % Part 3: restart the rebuilt cursor from the logged one at each new target
 
 
@@ -165,12 +165,12 @@ fprintf('Muscles: %s\n', strjoin(muscles, ', '));
     envOurs = filtfilt(d,c,emgRect);
 
 %   g) filtering can dip slightly below 0: set negative values to 0
-    % for any matrix A , doing A(A = 0) for example indexes all elements of matrix A and checks if = 0 
+    % for any matrix A , doing A(A = 0)  indexes all elements of matrix A and checks if aij = 0 
     % then you can choose to replace this value as done in the line bellow. For negative values.
     envOurs(envOurs<0)= 0;
     
 %   f) normalize: divide each column by its MAX  -> envOurs (0-1)
-    envOurs_norm= envOurs./max(envOurs); % takes column1/its max and so on..
+    envOurs_norm= envOurs./MAX; % takes column1/its max and so on..
     
 
 
@@ -359,126 +359,294 @@ dt   = 1 / fsDown;                         % time between downsampled samples [s
 % Keep one sample every 'step' and create:
 %   tD, envOursD, envMCID, cursorCmD
 % YOUR CODE HERE
-tD = 0 : dt:259;
 
 
 
-% %% PART 2 - The MCI map (given)
-% % -------------------------------------------------------------------------
-% % The MCI is in velocity control: the muscles set the cursor SPEED.
-% % Each axis is driven by a pair of muscles, and the speed is proportional
-% % to their DIFFERENCE, so contracting both together cancels out:
-% %
-% %     x speed = gain * (muscle A - muscle B)      (biceps pair)
-% %     y speed = gain * (muscle C - muscle D)      (trapezius pair)
-% %
-% % gain = Max Cursor Speed (50 cm/s): a muscle at 100% with the other one
-% % relaxed moves the cursor at 50 cm/s. The .mat stores the map (info.W) as a
-% % matrix W, one row per axis and one column per muscle, so that for all
-% % samples at once:
-% %
-% %     velocity (N x 2) = gain * envelopes (N x 4) * W'
-% gain = info.gain_cm_s;                     % [cm/s]
-% W    = info.W;                             % 2 x 4
-% fprintf('\nPart 2 - MCI map\n');
-% fprintf('  x speed        = %g * (%s)\n', gain, info.map_x);
-% fprintf('  y speed (down) = %g * (%s)\n', gain, info.map_y);
+%% vectorization implementation, % Keep one sample every 'step' and create:  tD, envOursD, envMCID, cursorCmD
+%  basically the idea is to create vector index, from 1 to
+% reach all number of samples ND. And  for all columns ':' index all the
+% rows from 1 to N take these values into our matrices.
+index = 1 : step :N;
+envMCID   = envMCI(index, :) ;
+envOursD  = envOurs_norm (index, :) ;
+cursorCmD = cursorCm (index, :) ;
+
+nD = size(envOursD,1); % new number of samples
+tD = (0 : dt:(nD-1)*dt)';
+
+%% the C/C++ :D 'implementation' to Keep one sample every 'step' and create: tD, envOursD, envMCID, cursorCmD
+% envMCID(ND,4)= 0 ;
+% envOursD(ND,4)= 0 ;
+% cursorCmD(ND,4)= 0 ;
+%
+% for j = 1 : 1: 4 % to loop the column
+%     for i = 1 : step : ND  % to loop the rows
 % 
-% % Dead zone: the MCI ignores any muscle below 5% of its max, so that
-% % resting noise does not move the cursor. Without this step the rebuilt
-% % cursor creeps away from the real one even when the subject is relaxed.
-% deadZone = 0.05;
+%         envOursD(i,j) = envOurs_norm(i,j);
+%         envMCID(i,j)  = envMCI(i,j);
+%         if (i <= 2) ; cursorCmD(i,j) = cursorCm(i,j); end
 % 
-% % 1) Apply the dead zone to envOursD and to envMCID (values below
-% %    deadZone become 0)
-% % 2) Compute the cursor velocity [cm/s] with the formula above:
-% %      velOurs  from your envelopes      (N x 2)
-% %      velMCI  from the MCI envelopes  (N x 2)
-% 
-% % YOUR CODE HERE
-% 
-% 
-% 
-% %% PART 3 - Rebuild the cursor from the envelopes
-% % -------------------------------------------------------------------------
-% % Velocity from the map (Part 2), then integrate (position = previous position +
-% % velocity * dt). Like the real cursor, ours can't leave the screen, so we
-% % clip it at the edges at every step.
-% %
-% % Integrating adds up every small error, so the rebuilt cursor slowly
-% % drifts away from the real one (try resetAtEachTarget = false to see it).
-% % With the reset, we restart from the logged position at each new target,
-% % so the error only builds up within one reach.
-% screenCm = info.screen_cm;                       % screen size [cm]
-% spawnT   = targets.spawn_time;                   % when each target appears [s]
-% 
-% % Rebuild two cursors, posOurs and posMCI [cm] (nD x 2, nD = numel(tD)),
-% % from velOurs and velMCI:
-% %   1) start both from the logged position: cursorCmD(1,:)
-% %   2) for each sample k = 2..nD: previous position + velocity * dt
-% %   3) clip to the screen: between [0 0] and screenCm
-% %   4) if resetAtEachTarget is true: at the first sample after each
-% %      spawnT, set both positions back to the logged one
-% % Then compute, for both, the distance from the logged cursor at each
-% % sample (errOurs, errMCI [cm]) and print its mean.
-% 
-% % YOUR CODE HERE
-% 
-% 
-% % Targets, converted to cm -> targCm (nTargets x 2)
-% 
-% % YOUR CODE HERE
-% 
-% 
-% % --- Animation: the cursor moving on the screen, target by target (given)
-% % Black = the real (logged) cursor, red = the one we rebuilt from the EMG.
-% % The current target is the green circle. It plays in real time.
-% if animateCursor
-%     nD = numel(tD);
-%     % which target is on screen at each sample = the last one spawned
-%     curTarget = zeros(nD, 1);
-%     for s = 1:numel(spawnT)
-%         curTarget(tD >= spawnT(s)) = s;
-%     end
-% 
-%     figure('Name', 'Part 3 - cursor animation');
-%     rectangle('Position', [0 0 screenCm]); hold on;            % the screen
-%     hTarg = plot(nan, nan, 'go', 'MarkerSize', 25, 'LineWidth', 2);
-%     hLogTrail = plot(nan, nan, 'Color', [0.6 0.6 0.6]);
-%     hLog  = plot(nan, nan, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 8);
-%     hOurs = plot(nan, nan, 'ro', 'MarkerFaceColor', 'r', 'MarkerSize', 8);
-%     set(gca, 'YDir', 'reverse');                               % screen y grows downward
-%     axis equal; xlim([0 screenCm(1)]); ylim([0 screenCm(2)]);
-%     xlabel('x [cm]'); ylabel('y [cm]');
-%     legend([hLog hOurs hTarg], {'logged cursor', 'rebuilt cursor', 'target'}, 'Location', 'eastoutside');
-%     tic; k = 1;
-%     while k <= nD
-%         if curTarget(k) > 0
-%             set(hTarg, 'XData', targCm(curTarget(k),1), 'YData', targCm(curTarget(k),2));
-%         end
-%         k0 = max(1, k - 200);              % trail = last 2 s of the logged cursor
-%         set(hLogTrail, 'XData', cursorCmD(k0:k,1), 'YData', cursorCmD(k0:k,2));
-%         set(hLog,  'XData', cursorCmD(k,1), 'YData', cursorCmD(k,2));
-%         set(hOurs, 'XData', posOurs(k,1),   'YData', posOurs(k,2));
-%         title(sprintf('t = %.1f s   target %d', tD(k), curTarget(k)));
-%         drawnow;
-%         k = max(k + 1, round(toc * fsDown) + 1);   % jump to the sample of "now"
-%         pause(max(0, (k - 1) / fsDown - toc));     % ahead of the clock? wait
 %     end
 % end
-% 
-% 
-% 
-% %% PART 4 - Performance per reach
-% % -------------------------------------------------------------------------
-% % Each trial goes from the moment the target appears (spawn_time) to the
-% % moment it is hit (hit_time). In center-out, every other target is the
-% % center (the way back): we look at the outward reaches only. In the
-% % random task all targets count.
-% %   1) select the reaches to use: target hit (hit_time is not NaN) and
-% %      target not at the center (targetPx differs from centerPx)
-% %   2) for each of them, plot in order (a learning curve):
-% %      - the reach time [s]            (targets.reach_time)
-% %      - the overshoots [count]        (targets.overshoots)
-% 
-% % YOUR CODE HERE
+
+%% PART 2 - The MCI map (given)
+% -------------------------------------------------------------------------
+% The MCI is in velocity control: the muscles set the cursor SPEED.
+% Each axis is driven by a pair of muscles, and the speed is proportional
+% to their DIFFERENCE, so contracting both together cancels out:
+%
+%     x speed = gain * (muscle A - muscle B)      (biceps pair)
+%     y speed = gain * (muscle C - muscle D)      (trapezius pair)
+%
+% gain = Max Cursor Speed (50 cm/s): a muscle at 100% with the other one
+% relaxed moves the cursor at 50 cm/s. The .mat stores the map (info.W) as a
+% matrix W, one row per axis and one column per muscle, so that for all
+% samples at once:
+%
+%     velocity (N x 2) = gain * envelopes (N x 4) * W'
+gain = info.gain_cm_s;                     % [cm/s]
+W    = info.W;                             % 2 x 4
+fprintf('\nPart 2 - MCI map\n');
+fprintf('  x speed        = %g * (%s)\n', gain, info.map_x);
+fprintf('  y speed (down) = %g * (%s)\n', gain, info.map_y);
+
+% Dead zone: the MCI ignores any muscle below 5% of its max, so that
+% resting noise does not move the cursor. Without this step the rebuilt
+% cursor creeps away from the real one even when the subject is relaxed.
+deadZone = 0.05;
+
+% 1) Apply the dead zone to envOursD and to envMCID (values below deadZone become 0)
+% 2) Compute the cursor velocity [cm/s] with the formula above:
+%      velOurs  from your envelopes      (N x 2)
+%      velMCI  from the MCI envelopes  (N x 2)
+
+% YOUR CODE HERE
+% 1) Apply the dead zone to envOursD and to envMCID (values below deadZone become 0)
+% for any matrix A , doing A(A = 0)  indexes all elements of matrix A and checks if aij = 0 
+ envOursD(envOursD < deadZone) = 0;
+ envMCID(envMCID < deadZone) = 0;
+% figure
+% plot(t,envMCI(:,1),t,envOurs_norm(:,1));
+
+% 2) Compute the cursor velocity [cm/s] with the formula : velocity (N x 2) = gain * envelopes (N x 4) * W':
+%      velOurs  from your envelopes      (N x 2)
+%      velMCI  from the MCI envelopes  (N x 2)
+    velOurs = gain * envOursD * W';
+    velMCI  = gain * envMCID *  W';
+
+%% PART 3 - Rebuild the cursor from the envelopes
+% -------------------------------------------------------------------------
+% Velocity from the map (Part 2), then integrate (position = previous position +
+% velocity * dt). Like the real cursor, ours can't leave the screen, so we
+% clip it at the edges at every step.
+%
+% Integrating adds up every small error, so the rebuilt cursor slowly
+% drifts away from the real one (try resetAtEachTarget = false to see it).
+% With the reset, we restart from the logged position at each new target,
+% so the error only builds up within one reach.
+screenCm = info.screen_cm;                       % screen size [cm]
+spawnT   = targets.spawn_time;                   % when each target appears [s]
+
+% Rebuild two cursors, posOurs and posMCI [cm] (nD x 2, nD = numel(tD)),
+% from velOurs and velMCI:
+%   1) start both from the logged position: cursorCmD(1,:)
+%   2) for each sample k = 2..nD: previous position + velocity * dt
+%   3) clip to the screen: between [0 0] and screenCm
+%   4) if resetAtEachTarget is true: at the first sample after each
+%      spawnT, set both positions back to the logged one
+%      Then compute, for both, the distance from the logged cursor at each
+%      sample (errOurs, errMCI [cm]) and print its mean.
+
+% YOUR CODE HERE
+
+ posOurs(1,:) = cursorCmD(1,:);
+ posMCI(1,:)  = cursorCmD(1,:);
+ errOurs = zeros(nD,2);
+ errMCI = zeros(nD,2);
+
+ current_time= 0; % to calculate time 
+ prev_time = 0;
+ % loop from k= 2 : step = 1 : end = nD (number of samples) 
+ for idx = 2 : 1 : nD 
+
+    % 1) calculated positions from velocities success :D
+    posOurs(idx,:) = dt*velOurs(idx,:) + posOurs(idx-1,:);
+    posMCI (idx,:) = dt*velMCI (idx,:) + posMCI (idx-1,:);
+    
+    % 2) clip values to min [0 0] and max screenCm
+    % implementation comments : screenCm is a row vector 1x2 , and at each
+    % iteration of idx, our positions posOurs and posMCI are also row vectors
+    % of 1x2 size. We want to bound the values between 0 and max screen
+    % pixles. 
+    % assuming our position is pos = [ 37 -1] and screenCm [30 20]. So we
+    % want to stay bounded from [0 0] to screenCm
+     % doing pos = minimum ( pos , screenCm) , returns [30 -1]
+     % then post maximum ( pos,[0 0]) , returns [30 0] and we achieved our
+     % goal!
+
+    posOurs(idx,:) = min(posOurs(idx,:), screenCm);
+    posOurs(idx,:) = max(posOurs(idx,:), [0 0]);
+    
+    posMCI(idx,:) = min(posMCI(idx,:), screenCm);
+    posMCI(idx,:) = max(posMCI(idx,:), [0 0]);
+
+    % % some old implementation ideas.for 3)
+    % temp_ours =posOurs(idx,:); temp_MCI =posMCI(idx,:);
+    % 
+    % xposOurs= temp_ours(1,1); xposMCI = temp_MCI (1,1); yposOurs=
+    % temp_ours(1,2); yposMCI = temp_MCI (1,2);
+    % if (posOurs(idx,:) > screenCm ) ; posOurs(idx,:) = screenCm; end if
+    % (posMCI(idx,:) >screenCm);posMCI(idx,:)= screenCm ; end
+    
+%   4) if resetAtEachTarget is true: at the first sample after each
+%      spawnT, set both positions back to the logged one
+
+        if resetAtEachTarget
+           current_time = tD(idx);
+           prev_time= tD(idx-1);
+
+           % comments on implementation 
+           % My goal is to reset the cursor positions to their recorded positions after each spawn
+           % time. So we want to compare our elapsed time and the spawn
+           % times. If the spawn time is more or equal to my elapsed time.
+           % then we know a spawn time has passed.
+           % the implementation in details 
+           % the statement : spawnT(:,1)> prev_time , returns an array of size 48, since spawnT is 48x1. 
+           % This array holds logical 1 or 0 values for each element of spawnT in the rows
+           % compared with prev_time. We use statement
+           % spawnT(:,1)<current_time. to see if any of the spawn time
+           % stamps fall within our current and previous times. Finally we
+           % use the & between statements to enforce our logic and then we
+           % use any (). Because they are arrays of logical values if we
+           % don't use any we get a true FOR THE WHOLE if statement if any
+           % of the element wise & is true. But we want to analyse for each
+           % element from 1 to 48 if our spawnT is in between the two
+           % values previous and current time.
+          
+           if any(spawnT(:,1)>= prev_time & spawnT(:,1)<current_time) 
+                 posOurs(idx,:)  = cursorCmD(idx,:);
+                 posMCI (idx,:)  = cursorCmD(idx,:);
+            end
+        end
+
+%      Then compute, for both, the distance from the logged cursor at each
+%      sample (errOurs, errMCI [cm]) and print its mean.
+            errOurs(idx,:) =  posOurs(idx,:)  - cursorCmD(idx,:);
+            errMCI(idx,:) =  posMCI(idx,:)  - cursorCmD(idx,:);
+
+           
+
+
+
+ end
+  errOurs_norm = vecnorm(errOurs, 2, 2); 
+ errMCI_norm  = vecnorm(errMCI, 2, 2);
+    mean_errOurs =  mean(errOurs_norm);
+    mean_errMCI = mean(errMCI_norm);
+fprintf('\nPart 3 - Errors\n');
+fprintf('  Our error mean = %.2f cm\n', mean_errOurs);
+fprintf('  MCI error mean = %.2f cm\n', mean_errMCI);
+
+% Targets, converted to cm -> targCm (nTargets x 2)
+
+% YOUR CODE HERE
+%   cmPerPx  = info.cm_per_px;            % [cm per px]
+%   targetPx  target positions [px], one row per target    (nTargets x 2)
+    targCm = cmPerPx * targetPx ;
+
+% --- Animation: the cursor moving on the screen, target by target (given)
+% Black = the real (logged) cursor, red = the one we rebuilt from the EMG.
+% The current target is the green circle. It plays in real time.
+if animateCursor
+    nD = numel(tD);
+    % which target is on screen at each sample = the last one spawned
+    curTarget = zeros(nD, 1);
+    for s = 1:numel(spawnT)
+        curTarget(tD >= spawnT(s)) = s;
+    end
+
+    figure('Name', 'Part 3 - cursor animation');
+    rectangle('Position', [0 0 screenCm]); hold on;            % the screen
+    hTarg = plot(nan, nan, 'go', 'MarkerSize', 25, 'LineWidth', 2);
+    hLogTrail = plot(nan, nan, 'Color', [0.6 0.6 0.6]);
+    hLog  = plot(nan, nan, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 8);
+    hOurs = plot(nan, nan, 'ro', 'MarkerFaceColor', 'r', 'MarkerSize', 8);
+    set(gca, 'YDir', 'reverse');                               % screen y grows downward
+    axis equal; xlim([0 screenCm(1)]); ylim([0 screenCm(2)]);
+    xlabel('x [cm]'); ylabel('y [cm]');
+    legend([hLog hOurs hTarg], {'logged cursor', 'rebuilt cursor', 'target'}, 'Location', 'eastoutside');
+    tic; k = 1;
+    while k <= nD
+        if curTarget(k) > 0
+            set(hTarg, 'XData', targCm(curTarget(k),1), 'YData', targCm(curTarget(k),2));
+        end
+        k0 = max(1, k - 200);              % trail = last 2 s of the logged cursor
+        set(hLogTrail, 'XData', cursorCmD(k0:k,1), 'YData', cursorCmD(k0:k,2));
+        set(hLog,  'XData', cursorCmD(k,1), 'YData', cursorCmD(k,2));
+        set(hOurs, 'XData', posOurs(k,1),   'YData', posOurs(k,2));
+        title(sprintf('t = %.1f s   target %d', tD(k), curTarget(k)));
+        drawnow;
+        k = max(k + 1, round(toc * fsDown) + 1);   % jump to the sample of "now"
+        pause(max(0, (k - 1) / fsDown - toc));     % ahead of the clock? wait
+    end
+end
+
+
+
+%% PART 4 - Performance per reach
+% -------------------------------------------------------------------------
+% Each trial goes from the moment the target appears (spawn_time) to the
+% moment it is hit (hit_time). In center-out, every other target is the
+% center (the way back): we look at the outward reaches only. In the
+% random task all targets count.
+%   1) select the reaches to use: target hit (hit_time is not NaN) and
+%      target not at the center (targetPx differs from centerPx)
+%   2) for each of them, plot in order (a learning curve):
+%      - the reach time [s]            (targets.reach_time)
+%      - the overshoots [count]        (targets.overshoots)
+
+% YOUR CODE HERE
+% is the task centerout or random?
+plot_x_axis_targets =  1: 1: size(targets,1);
+reach_time =  targets.reach_time;
+overshoots = targets.overshoots;
+count=1;
+valid_reach = []';
+valid_overshoot = []';
+validIndex = []';
+for n1=1: 1 : size(targets,1)
+    if ~(isnan(targets.hit_time(n1)) && targets.target_x_px(n1) == centerPx(n1,1) && targets.target_y_px(n1) ~= centerPx(n1,2))
+        % target valid 
+         validIndex(count) = n1;
+        valid_reach(count)=reach_time(n1);
+        valid_overshoot(count) = overshoots(n1);
+        count = count+1;
+    else
+
+    end
+end
+% to identify valid targets for center out we want to exclude NaN values
+% for reach time and to exclude targets at the center.
+
+
+    if strcmp(task, 'centerout')
+                
+                figure('Name',"reach time and overshoot");
+                subplot(2,1,1);
+                plot(validIndex,valid_reach,'o');
+                ylabel('reach time');
+    
+                subplot(2,1,2);
+                plot(validIndex,valid_overshoot,'x');
+                ylabel('overshoots');
+    
+
+            
+    
+    elseif strcmp(task,'random')
+        
+    
+    else
+         print('error in if condition of part 4'); 
+    
+    end
