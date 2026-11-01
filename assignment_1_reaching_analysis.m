@@ -31,12 +31,12 @@ clear; close all; clc;
 %% 0. Settings
 % -------------------------------------------------------------------------
 matFile = 'Group_1.mat';   % your group's data file
-task    = 'centerout';     % which task to analyze: 'centerout' or 'random'
+task    = 'random';     % which task to analyze: 'centerout' or 'random'
 fsDown  = 100;             % rate we use after the envelope is computed [Hz]
 
 animateCursor     = false;  % Part 3: animate the logged and the rebuilt cursor on the screen
 resetAtEachTarget = true;  % Part 3: restart the rebuilt cursor from the logged one at each new target
-
+animateArm        = true;  % Part 5: animate the robotic arm on the screen
 
 %% 1. Load the data
 % -------------------------------------------------------------------------
@@ -93,7 +93,7 @@ cursorCm = D{:, {'cursor_x_cm','cursor_y_cm'}};
 % centerout or random to have this done once above :D , to improve later
 % because not working
 % 
-targetPx = centerout_targets{:,{'target_x_px','target_y_px'}};
+targetPx = targets{:,{'target_x_px','target_y_px'}};
 
 % Units: the raw EMG is stored in ADC counts. The sensors use a signed
 % 16-bit converter (-32768 ... +32767) over an input range of +-2.5 mV, so
@@ -183,96 +183,103 @@ fprintf('Muscles: %s\n', strjoin(muscles, ', '));
 % YOUR CODE HERE
 figure('Name','Pre-processing steps: raw , filtered, rectified, Envelop')  
 
-subplot(4,4,1)
+subplot(4,3,1)
 plot(t,raw_R_bicep,'y');
-ylabel('right bicep')
+ylabel('right bicep [uV]')
 title('Raw EMG')
-xlim([0 3]);
+xlim([1.5 4.5]);
 
-subplot(4,4,5)
+subplot(4,3,4)
 plot(t,raw_L_bicep,'g');
-ylabel('left bicep');
-xlim([0 3]);
+ylabel('left bicep [uV]');
+xlim([1.5 4.5]);
 
-subplot(4,4,9)
+subplot(4,3,7)
 plot(t,raw_L_trap,'c');
-ylabel('left trapezius');
-xlim([0 3]);
+ylabel('left trapezius [uV]');
+xlim([1.5 4.5]);
 
-subplot(4,4,13)
+subplot(4,3,10)
 plot(t,raw_R_trap,'color', [1 0.7 0]);
-ylabel('right trapezius');
-xlabel('Time');
-xlim([0 3]);
+ylabel('right trapezius [uV]');
+xlabel('Time [s]');
+xlim([1.5 4.5]);
 
 %%%%%%%%%%%% after band pass filtered
-subplot(4,4,2)
+subplot(4,3,2)
 plot(t,filt_R_bicep,'y');
-ylabel('right bicep')
 title('Filtered EMG 30 to 450 Hz')
-xlim([0 3]);
+xlim([1.5 4.5]);
 
-subplot(4,4,6)
+subplot(4,3,5)
 plot(t,filt_L_bicep,'g');
-ylabel('left bicep');
-xlim([0 3]);
+xlim([1.5 4.5]);
 
-subplot(4,4,10)
+subplot(4,3,8)
 plot(t,filt_L_trap,'c');
 ylabel('left trapezius');
-xlim([0 3]);
+xlim([1.5 4.5]);
 
-subplot(4,4,14)
+subplot(4,3,11)
 plot(t,filt_R_trap,'color', [1 0.7 0]);
-ylabel('right trapezius');
-xlabel('Time');
-xlim([0 3]);
+xlabel('Time [s]');
+xlim([1.5 4.5]);
 
 %%%%%%%%%%%% after Full wave rectifier, aka absolute value :D
-subplot(4,4,3)
-plot(t,emgRect(:,1),'y');
-ylabel('right bicep')
-title('Rectified')
-xlim([0 3]);
+subplot(4,3,3)
+plot(t, emgRect(:,1), 'Color', [0.8 0.8 0.8]); 
+hold on;
+plot(t, envOurs(:,1), 'Color', 'r');
+hold off;
+legend({'Rectified EMG', 'Envelope'});
 
-subplot(4,4,7)
-plot(t,emgRect(:,2),'g');
-ylabel('left bicep');
-xlim([0 3]);
+title('Rectified EMG , 5Hz Envelope')
+xlim([1.5 4.5]);
 
-subplot(4,4,11)
-plot(t,emgRect(:,3),'c');
-ylabel('left trapezius');
-xlim([0 3]);
+subplot(4,3,6)
+plot(t,emgRect(:,2),'Color',[0.8 0.8 0.8]);
+hold on;
+plot(t, envOurs(:,2), 'Color', 'r');
+hold off;
+xlim([1.5 4.5]);
 
-subplot(4,4,15)
-plot(t,emgRect(:,4),'color', [1 0.7 0]);
-ylabel('right trapezius');
-xlabel('Time');
-xlim([0 3]);
+subplot(4,3,9)
+plot(t,emgRect(:,3),'Color',[0.8 0.8 0.8]);
+hold on;
+plot(t, envOurs(:,3), 'Color', 'r');
+hold off;
+xlim([1.5 4.5]);
+
+subplot(4,3,12)
+plot(t,emgRect(:,4),'Color',[0.8 0.8 0.8]);
+hold on;
+plot(t, envOurs(:,4), 'Color', 'r');
+hold off;
+xlabel('Time [s]');
+xlim([1.5 4.5]);
 
 %%%%%%%%%%%% after linear envelop , by 5 Hz low pass filter
-subplot(4,4,4)
-plot(t,envOurs(:,1),'y');
-ylabel('right bicep')
-title('Linear Envelop')
-xlim([0 3]);
-
-subplot(4,4,8)
-plot(t,envOurs(:,2),'g');
-ylabel('left bicep');
-xlim([0 3]);
-
-subplot(4,4,12)
-plot(t,envOurs(:,3),'c');
-ylabel('left trapezius');
-xlim([0 3]);
-
-subplot(4,4,16)
-plot(t,envOurs(:,4),'color', [1 0.7 0]);
-ylabel('right trapezius');
-xlabel('Time');
-xlim([0 3]);
+% subplot(4,4,4)
+% plot(t,envOurs(:,1),'r');
+% ylabel('right bicep [uV]')
+% title('Linear Envelop')
+% xlim([0 3]);
+% 
+% subplot(4,4,8)
+% plot(t,envOurs(:,2),'r');
+% ylabel('left bicep [uV]');
+% xlim([0 3]);
+% 
+% subplot(4,4,12)
+% plot(t,envOurs(:,3),'r');
+% ylabel('left trapezius [uV]');
+% xlim([0 3]);
+% 
+% subplot(4,4,16)
+% plot(t,envOurs(:,4),'r');
+% ylabel('right trapezius [uV]');
+% xlabel('Time [s]');
+% xlim([0 3]);
 
 % --- Compare your envelopes with the MCI ones (envMCI)
 % For each muscle:
@@ -281,62 +288,80 @@ xlim([0 3]);
 % Then plot the two envelopes on top of each other (a 30 s window is enough).
 
 % YOUR CODE HERE
-a1=corrcoef(envMCI(:,1),envOurs_norm(:,1));
-alpha1=corrcoef(envMCI(:,1),envOurs_norm(:,1));
+% alpha1=corrcoef(envMCI(:,1),envOurs_norm(:,1));
+% 
+% 
 
 
-[amb1,alags1] =xcorr(envMCI(:,1),envOurs_norm(:,1));
-[maxValue1, maxIndex1] = max(amb1);
-
-delay1 = (alags1(maxIndex1)/fs)*1000;
 % to get seconds divide by fs, delay1 is in samples so samples/ (samples/ second) we get seconds. 
 % Then multiply by 1000 to get milliseconds
+fprintf('\nPart 1 -  Correlation and lag values\n');
+ delay = zeros(size(muscles,2),1);
+for m = 1 : size(muscles,2) % 4 columns for each muscle
+    alpha=corrcoef(envMCI(:,m),envOurs_norm(:,m));
 
 
-[amb2,alags2] =xcorr(envMCI(:,2),envOurs_norm(:,2));
-[maxValue2, maxIndex2] = max(amb2);
+    [R,alags] =xcorr(envMCI(:,m),envOurs_norm(:,m));
+    [maxValue1, maxIndex1] = max(R); % find the maximum value , correlation between the two muscles, return this value with its index. We then use the max correlation value where the signals are most similar to calculate the lag.
 
-delay2 = (alags2(maxIndex2)/fs)*1000; 
+    delay(m) = (alags(maxIndex1)/fs)*1000;
+    fprintf('Correlation coefficient for %s [0 - 1] = %.2f \n',muscles{m}, alpha(2,1));
+    
+    
+    
 
-[amb3,alags3] =xcorr(envMCI(:,3),envOurs_norm(:,3));
-[maxValue3, maxIndex3] = max(amb3);
+    if delay(m) < 0 
+        fprintf('MCI leads our %s signal by  %.2f milliseconds\n',muscles{m}, abs(delay(m)));
+    else
+        fprintf('MCI lags our %s signal by  %.2f milliseconds\n',muscles{m},delay(m));
+    
+    end
+ fprintf('\n');
+%fprintf('  MCI error mean = %.2f cm\n', mean_errMCI);
+end
 
-delay3 = (alags3(maxIndex3)/fs)*1000; 
 
-[amb4,alags4] =xcorr(envMCI(:,4),envOurs_norm(:,4));
-[maxValue4, maxIndex4] = max(amb4);
 
-delay4 = (alags4(maxIndex4)/fs)*1000; 
+% [amb2,alags2] =xcorr(envMCI(:,2),envOurs_norm(:,2));
+% [maxValue2, maxIndex2] = max(amb2);
+% 
+% delay2 = (alags2(maxIndex2)/fs)*1000; 
+% 
+% [amb3,alags3] =xcorr(envMCI(:,3),envOurs_norm(:,3));
+% [maxValue3, maxIndex3] = max(amb3);
+% 
+% delay3 = (alags3(maxIndex3)/fs)*1000; 
+% 
+% [amb4,alags4] =xcorr(envMCI(:,4),envOurs_norm(:,4));
+% [maxValue4, maxIndex4] = max(amb4);
+% 
+% delay4 = (alags4(maxIndex4)/fs)*1000; 
 
 
 figure('Name','Recorded MCI Envelopes VS our Envelopes (Normalized)'); 
 subplot(4,1,1);
 plot(t,envMCI(:,1),t,envOurs_norm(:,1));
 legend('MCI Env', 'Our Env Norm');
-xlabel('Time');
-ylabel('Right bicep');
-xlim([0 30]);
+ylabel('Right bicep activation[0-1]');
+xlim([15 45]);
 
 subplot(4,1,2);
 plot(t,envMCI(:,2),t,envOurs_norm(:,2));
 legend('MCI Env', 'Our Env Norm');
-xlabel('Time');
-ylabel('left bicep');
-xlim([0 30]);
+ylabel('left bicep activation[0-1]');
+xlim([15 45]);
 
 subplot(4,1,3);
 plot(t,envMCI(:,3),t,envOurs_norm(:,3));
 legend('MCI Env', 'Our Env Norm');
-xlabel('Time');
-ylabel('left trap');
-xlim([0 30]);
+ylabel('left trap activation[0-1]');
+xlim([15 45]);
 
 subplot(4,1,4);
 plot(t,envMCI(:,4),t,envOurs_norm(:,4));
 legend('MCI Env', 'Our Env Norm');
-xlabel('Time');
-ylabel('right trap');
-xlim([0 30]);
+ylabel('right trap activation[0-1]');
+xlim([15 45]);
 
 %%% comments after comparing both envelopes. 
 % First It can be seen clearly from the figures
@@ -539,10 +564,10 @@ spawnT   = targets.spawn_time;                   % when each target appears [s]
 
 
  end
-  errOurs_norm = vecnorm(errOurs, 2, 2); 
+ errOurs_norm = vecnorm(errOurs, 2, 2); 
  errMCI_norm  = vecnorm(errMCI, 2, 2);
-    mean_errOurs =  mean(errOurs_norm);
-    mean_errMCI = mean(errMCI_norm);
+ mean_errOurs =  mean(errOurs_norm);
+ mean_errMCI = mean(errMCI_norm);
 fprintf('\nPart 3 - Errors\n');
 fprintf('  Our error mean = %.2f cm\n', mean_errOurs);
 fprintf('  MCI error mean = %.2f cm\n', mean_errMCI);
@@ -608,45 +633,144 @@ end
 % YOUR CODE HERE
 % is the task centerout or random?
 plot_x_axis_targets =  1: 1: size(targets,1);
+
 reach_time =  targets.reach_time;
 overshoots = targets.overshoots;
+
 count=1;
 valid_reach = []';
 valid_overshoot = []';
 validIndex = []';
+x_px =centerPx(1);
+y_px = centerPx(2);
+
+% to identify valid targets for center out we want to exclude NaN values
+% for reach time and to exclude targets at the center.
 for n1=1: 1 : size(targets,1)
-    if ~(isnan(targets.hit_time(n1)) && targets.target_x_px(n1) == centerPx(n1,1) && targets.target_y_px(n1) ~= centerPx(n1,2))
-        % target valid 
-         validIndex(count) = n1;
+    if ( or(isnan(targets.hit_time(n1)), targets.target_x_px(n1) == x_px && targets.target_y_px(n1) == y_px))
+
+    else
+        % target valid
+        validIndex(count) = n1;
         valid_reach(count)=reach_time(n1);
         valid_overshoot(count) = overshoots(n1);
         count = count+1;
-    else
 
     end
 end
-% to identify valid targets for center out we want to exclude NaN values
-% for reach time and to exclude targets at the center.
 
 
-    if strcmp(task, 'centerout')
-                
-                figure('Name',"reach time and overshoot");
-                subplot(2,1,1);
-                plot(validIndex,valid_reach,'o');
-                ylabel('reach time');
-    
-                subplot(2,1,2);
-                plot(validIndex,valid_overshoot,'x');
-                ylabel('overshoots');
-    
+                               
+figure('Name',"Reach Time and Overshoot");
+subplot(2,1,1);
+plot(validIndex, valid_reach, ...
+    'Color', 'b', ...           % Line color
+    'Marker', 'o', ...          % Circle marker
+    'MarkerFaceColor', 'r', ... % Inside of the circle is red
+    'MarkerEdgeColor', 'r');    % Border of the circle is redylabel('Reach Time [s]');
+legend({'Reach Time'});
 
-            
-    
-    elseif strcmp(task,'random')
-        
-    
-    else
-         print('error in if condition of part 4'); 
-    
-    end
+subplot(2,1,2);
+plot(validIndex, valid_overshoot, ...
+    'Color', 'b', ...           % Line color
+    'Marker', 'o', ...          % Circle marker
+    'MarkerFaceColor', 'r', ... % Inside of the circle is red
+    'MarkerEdgeColor', 'r');    % Border of the circle is red
+xlabel('Trial')
+legend({'Overshoots'});
+
+
+%     %% PART 5 - Robot reaching: drive a 2-link robot arm with your cursor
+% % -------------------------------------------------------------------------
+% % Picture a planar arm with two links in front of the screen: the shoulder
+% % is at the origin, the screen center is 0.40 m in front of it. The screen
+% % is shrunk to 0.40 m wide, so that every point of it is within reach of
+% % the arm, whatever the size of the monitor used in the recording. The
+% % rebuilt cursor tells the HAND where to go; the robot needs JOINT angles
+% % q = [q1 q2] (shoulder, elbow). The Jacobian J links the two speeds:
+% %
+% %       hand velocity = J(q) * joint velocity
+% %
+% % so at every step we invert it to get the joint velocity, and integrate it
+% % to get the angles (resolved-rate control):
+% %
+% %       joint velocity = J(q) \ hand velocity
+% %
+% % Formulas you need (s1 = sin(q1), c1 = cos(q1), s12 = sin(q1+q2), c12 = cos(q1+q2)):
+% %   forward kinematics (hand position):
+% %       x = L1*c1 + L2*c12,   y = L1*s1 + L2*s12
+% %   Jacobian:
+% %       J = [ -L1*s1 - L2*s12 , -L2*s12 ;
+% %              L1*c1 + L2*c12 ,  L2*c12 ]
+% %   inverse kinematics (only for the first point, "elbow down"):
+% %       q2 = acos((x^2 + y^2 - L1^2 - L2^2) / (2*L1*L2))
+% %       q1 = atan2(y, x) - atan2(L2*sin(q2), L1 + L2*cos(q2))
+% 
+% L1 = 0.30;  L2 = 0.30;                     % link lengths [m]
+% centerRobot = [0 0.40];                    % screen center in the robot frame [m]
+% scale = 0.40 / (screenCm(1) / 100);        % screen -> robot: the screen becomes 0.40 m wide
+% Kcorr = 10;                                % correction gain [1/s], see step 4
+% nD = numel(tD);
+% 
+% % 1) Screen frame -> robot frame. From posOurs [cm, y down] compute the
+% %    hand reference handRef [m, y up] (nD x 2):
+% %      - subtract the screen center in cm (centerPx * cmPerPx)
+% %      - convert cm -> m and multiply by scale
+% %      - flip y (screen y grows downward, robot y grows upward)
+% %      - add centerRobot
+% %    Do the same for the targets: targCm -> targRobot (nTargets x 2).
+% 
+% % YOUR CODE HERE
+% 
+% 
+% % 2) Hand velocity handVel [m/s] (nD x 2): derivative of handRef
+% %    (gradient of each column, divided by dt).
+% 
+% % YOUR CODE HERE
+% 
+% 
+% % 3) Starting angles: inverse kinematics of the first point handRef(1,:)
+% %    (formulas above). Store them in q(1,:), with q = zeros(nD, 2).
+% 
+% % YOUR CODE HERE
+% 
+% 
+% % 4) For each sample k = 1..nD:
+% %      - compute the hand position with forward kinematics -> handArm(k,:)
+% %      - compute J at q(k,:) and its determinant -> detJ(k)
+% %      - if k < nD: joint velocity with the Jacobian, then integrate:
+% %            qdot = J \ (handVel(k,:) + Kcorr*(handRef(k,:) - handArm(k,:)))'
+% %            q(k+1,:) = q(k,:) + qdot' * dt
+% %    The Kcorr term pulls the hand back toward the reference: without it,
+% %    small integration errors (and the jumps when the cursor is reset at a
+% %    new target) would never be undone.
+% 
+% % YOUR CODE HERE
+% 
+% 
+% % 5) Check and plot:
+% %      - distance between handArm and handRef [mm]: print its mean and max
+% %      - the smallest |detJ|: near 0 = singularity (arm fully stretched)
+% %      - figure: hand path with the targets, and the joint angles [deg] in time
+% 
+% % YOUR CODE HERE
+% 
+% 
+% % --- Animation of the arm (given): plays in real time
+% if animateArm
+%     figure('Name', 'Part 5 - robot arm animation');
+%     plot(targRobot(:,1), targRobot(:,2), 'go', 'MarkerSize', 10, 'LineWidth', 2); hold on;
+%     hArm  = plot([0 0 0], [0 0 0], 'b-o', 'LineWidth', 3);
+%     hPath = plot(nan, nan, 'r');
+%     axis equal; axis([-0.35 0.35 -0.05 0.65]); xlabel('x [m]'); ylabel('y [m]');
+%     tic; k = 1;
+%     while k <= nD
+%         elbow = [L1*cos(q(k,1)), L1*sin(q(k,1))];
+%         set(hArm,  'XData', [0 elbow(1) handArm(k,1)], 'YData', [0 elbow(2) handArm(k,2)]);
+%         set(hPath, 'XData', handArm(1:k,1), 'YData', handArm(1:k,2));
+%         title(sprintf('t = %.1f s', tD(k)));
+%         drawnow;
+%         k = max(k + 1, round(toc * fsDown) + 1);   % jump to the sample of "now"
+%         pause(max(0, (k - 1) / fsDown - toc));     % ahead of the clock? wait
+%     end
+% end
