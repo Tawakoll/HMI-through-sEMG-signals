@@ -4,9 +4,9 @@ Biomedical Robotics - Group 1 (Mohamed Tawakol Ahmed, Paolo Nicolini, Endri Gjin
 
 ## Demo
 
-![Cursor Control Demo](cursor_control.gif)
+![Cursor Control Demo](Video%20demo/cursor_control.gif)
 
-*Video file: [`cursor_control.mp4`](cursor_control.mp4)*
+*Video file: [`cursor_control.mp4`](Video%20demo/cursor_control.mp4)*
 
 ## Credits
 The code skeleton (`assignment_1_reaching_analysis.m`) was written by the Teaching Assistant **Federica Sassi** (PhD student, bioengineering, UniGe). We only completed the parts marked "YOUR CODE HERE", and added the comments and figures.
