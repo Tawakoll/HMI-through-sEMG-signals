@@ -34,7 +34,7 @@ matFile = 'sEMG live recording data/Group_1.mat';   % your group's data file
 task    = 'centerout';     % which task to analyze: 'centerout' or 'random'
 fsDown  = 100;             % rate we use after the envelope is computed [Hz]
 
-animateCursor     = false;  % Part 3: animate the logged and the rebuilt cursor on the screen
+animateCursor     = true;  % Part 3: animate the logged and the rebuilt cursor on the screen
 resetAtEachTarget = true;  % Part 3: restart the rebuilt cursor from the logged one at each new target
 animateArm        = false;  % Part 5: animate the robotic arm on the screen
 
@@ -206,7 +206,7 @@ xlim([1.5 4.5]);
 %%%%%%%%%%%% after band pass filtered
 subplot(4,3,2)
 plot(t,filt_R_bicep,'y');
-title('Filtered EMG 30 to 450 Hz')
+title('Filtered EMG 10 to 450 Hz')
 xlim([1.5 4.5]);
 
 subplot(4,3,5)
